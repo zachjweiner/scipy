@@ -1,7 +1,9 @@
 import numpy as np
+cimport numpy as np
+cimport cython
 
 
-def check_arguments(fun, y0, support_complex):
+def check_arguments(fun, t0, y0, support_complex):
     """Helper function for checking arguments common to all solvers."""
     y0 = np.asarray(y0)
     if np.issubdtype(y0.dtype, np.complexfloating):
@@ -16,13 +18,22 @@ def check_arguments(fun, y0, support_complex):
     if y0.ndim != 1:
         raise ValueError("`y0` must be 1-dimensional.")
 
+    f = fun(t0, y0)
+    # if "cython" in str(type(f)):  # FIXME!!!!
+    #     fun_wrapped = fun
+    # else:
+    #     if f.dtype != dtype or not isinstance(f, np.ndarray):
+    #         def fun_wrapped(t, y):
+    #             return np.asarray(fun(t, y), dtype=dtype)
+    #     else:
+    #         fun_wrapped = fun
     def fun_wrapped(t, y):
         return np.asarray(fun(t, y), dtype=dtype)
 
     return fun_wrapped, y0
 
 
-class OdeSolver:
+cdef class OdeSolver:
     """Base class for ODE solvers.
 
     In order to implement a new solver you need to follow the guidelines:
@@ -114,11 +125,13 @@ class OdeSolver:
 
     def __init__(self, fun, t0, y0, t_bound, vectorized,
                  support_complex=False):
-        self.t_old = None
+        self.t_old = t0
         self.t = t0
-        self._fun, self.y = check_arguments(fun, y0, support_complex)
+        self._fun, y0 = check_arguments(fun, t0, y0, support_complex)
+        self.y = y0
         self.t_bound = t_bound
         self.vectorized = vectorized
+        self.dtype = y0.dtype  # FIXME: doubles used everywhere
 
         if vectorized:
             def fun_single(t, y):
@@ -148,6 +161,12 @@ class OdeSolver:
         self.nfev = 0
         self.njev = 0
         self.nlu = 0
+        self.n_accept = 0
+        self.n_reject = 0
+
+    @property
+    def y(self):
+        return np.array(self.y)
 
     @property
     def step_size(self):

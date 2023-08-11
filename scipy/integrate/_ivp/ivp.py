@@ -658,7 +658,7 @@ def solve_ivp(fun, t_span, y0, method='RK45', t_eval=None, dense_output=False,
 
     if t_eval is None:
         ts = np.array(ts)
-        ys = np.vstack(ys).T
+        ys = np.array(ys).T
     elif ts:
         ts = np.hstack(ts)
         ys = np.hstack(ys)
@@ -673,4 +673,5 @@ def solve_ivp(fun, t_span, y0, method='RK45', t_eval=None, dense_output=False,
 
     return OdeResult(t=ts, y=ys, sol=sol, t_events=t_events, y_events=y_events,
                      nfev=solver.nfev, njev=solver.njev, nlu=solver.nlu,
+                     n_accept=solver.n_accept, n_reject=solver.n_reject,
                      status=status, message=message, success=status >= 0)
